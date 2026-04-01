@@ -198,6 +198,37 @@ public class DungeonGenerator : MonoBehaviour
 
     private void AnalyzeLayout()
     {
+        floorCells.Clear();
+        deadEnds.Clear();
+
+        distanceMap = new int[mapWidth, mapHeight];
+
+        for (int x = 0; x < mapWidth; x++)
+        {
+            for (int = 0; y < mapHeight; y++)
+            {
+                distanceMap[x, y] = -1;
+            }
+        }
+
+        for (int x = 0; x < mapWidth; x++)
+        {
+            for (int y = 0; y< mapHeight; y++)
+            {
+                if (floorMap[x, y])
+                {
+                    floorCells.Add(new Vector2Int(x, y))
+                }
+            }
+        }
+
+        if (floorCells.Count == 0)
+        {
+            return;
+        }
+
+        startPos = floorCells[0];
+
         
     }
 }
