@@ -22,12 +22,14 @@ public class DungeonGenerator : MonoBehaviour
     [Header("Tilemaps")]
     [SerializeField] private Tilemap groundTilemap;
     [SerializeField] private Tilemap contentTilemap;
-    [SerializeField] private Tilemap FloorTile;
-    [SerializeField] private TileBase startTile;
-    [SerializeField] private TileBase endTile;
 
     [Header("Tiles")]
     [SerializeField] private TileBase floorTile;
+    [SerializeField] private TileBase startTile;
+    [SerializeField] private TileBase endTile;
+    [SerializeField] private TileBase challangeATile;
+    [SerializeField] private TileBase challangeBTile;
+
 
     // Analysis data
     private int[,] distanceMap;
@@ -35,6 +37,8 @@ public class DungeonGenerator : MonoBehaviour
     private List<Vector2Int> deadEnds = new();
     private Vector2Int startPos;
     private Vector2Int farthestPos;
+    private Vector2Int challangeAPos;
+    private Vector2Int challangeBPos;
 
     private System.Random rng;
     private bool[,] floorMap;
@@ -80,8 +84,9 @@ public class DungeonGenerator : MonoBehaviour
         CarveAllRooms();
 
         AnalyzeLayout();
-        DrawFloorMap();
+        PlaceChallanges();
 
+        DrawFloorMap();
         DrawContent();
 
         Debug.Log($"Dungeon generated with seed: {seed}, rooms: {rooms.Count}, deadEnds: {deadEnds.Count}");
@@ -403,4 +408,70 @@ public class DungeonGenerator : MonoBehaviour
             contentTilemap.SetTile(new Vector3Int(farthestPos.x, farthestPos.y, 0), endTile);
         }
     }
+
+    private void PlaceChallanges()
+    {
+        // fallbacks
+        challangeAPos = startPos;
+        challangeBPos = farthestPos;
+
+        challangeAPos = FindCellClosestToDistance(GetDistanceAt(farthestPos) / 2);
+
+        Vector2Int? deadEndChoice = GetBestDeadEndForChallange();
+        if (deadEndChoice.HasValue)
+        {
+            challangeBPos = deadEndChoice.Value;
+        }
+        else
+        {
+            challangeBPos = FindFarFloorNotReserved();
+        }
+    }
+
+    private int GetDistanceAt(Vector2Int p)
+    {
+        if (!InBounds(p.x, p.y)) return -1;
+        return distanceMap[p.x, p.y];
+    }
+
+    private Vector2Int FindCellClosestToDistance(int targetDistance)
+    {
+        Vector2Int best = startPos;
+        int bestDiff = int.MaxValue;
+
+        foreach (Vector2Int c in floorCells)
+        {
+            int d = distanceMap[c.x, c.y];
+            if (d < 0) continue;
+
+            int diff = Mathf.Abs(d - targetDistance);
+            if (diff < bestDiff && !IsReserved(c))
+            {
+                bestDiff = diff;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    private Vector2Int? GetBestDeadEndForChallange()
+    {
+        Vector2Int? best = null;
+        int bestDist = -1;
+
+        foreach (Vector2Int d in deadEnds)
+        {
+            if (IsReserved(d)) continue;
+
+            int dist = distanceMap[d.x, d.y];
+            if (dist > bestDist)
+            {
+                bestDist = dist;
+                best = d;
+            }
+        }
+        return best;
+    }
+
+    
 }
