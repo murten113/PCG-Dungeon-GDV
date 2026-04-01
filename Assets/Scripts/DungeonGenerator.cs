@@ -323,8 +323,8 @@ public class DungeonGenerator : MonoBehaviour
 
         RunBfsFrom(candidateStart, out Vector2Int candidateEnd);
 
-        startPos = candidateEnd;
-        farthestPos = candidateStart;
+        startPos = candidateStart;
+        farthestPos = candidateEnd;
 
         RunBfsFrom(startPos, out _);
 
@@ -398,11 +398,6 @@ public class DungeonGenerator : MonoBehaviour
             return;
         }
 
-        if (startTile != null)
-        {
-            contentTilemap.SetTile(new Vector3Int(startPos.x, startPos.y, 0), startTile);
-        }
-
         if (endTile != null)
         {
             contentTilemap.SetTile(new Vector3Int(farthestPos.x, farthestPos.y, 0), endTile);
@@ -417,6 +412,13 @@ public class DungeonGenerator : MonoBehaviour
         {
             contentTilemap.SetTile(new Vector3Int(challengeBPos.x, challengeBPos.y, 0), challengeBTile);
         }
+        
+        if (startTile != null)
+        {
+            contentTilemap.SetTile(new Vector3Int(startPos.x, startPos.y, 0), startTile);
+        }
+        
+        Debug.Log($"Start:{startPos} tile?{startTile!=null}  End:{farthestPos}  A:{challengeAPos}  B:{challengeBPos}");
     }
 
     private void PlaceChallenges()

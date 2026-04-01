@@ -293,7 +293,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000
+  m_ApplyToSortingLayers: 00000000896b4d13
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -562,7 +562,7 @@ TilemapRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10
   m_ChunkSize: {x: 32, y: 32, z: 32}
   m_ChunkCullingBounds: {x: 0, y: 0, z: 0}
   m_MaxChunkCount: 16
@@ -616,8 +616,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 984293606}
   - {fileID: 1066361613}
+  - {fileID: 984293606}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!156049354 &1337628654
@@ -663,13 +663,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mapWidth: 60
   mapHeight: 40
+  minPartitionSize: 12
   minRoomSize: 6
   maxDepth: 4
+  roomPadding: 1
   seed: 1234
-  randomizeSeedOnPlay: 0
+  randomizeSeedOnPlay: 1
   groundTilemap: {fileID: 984293608}
   contentTilemap: {fileID: 1066361611}
   floorTile: {fileID: 11400000, guid: fd80d56c890619f4780481cd075adffe, type: 2}
+  startTile: {fileID: 11400000, guid: 697569fd6f347e344bbc372b7827850c, type: 2}
+  endTile: {fileID: 11400000, guid: 628041ede75c01a4188a19351d41005a, type: 2}
+  challengeATile: {fileID: 11400000, guid: 2363f8be40c96af408ba366235984d1a, type: 2}
+  challengeBTile: {fileID: 11400000, guid: 8ad9f89b6d638994dbede03a33dc7399, type: 2}
 --- !u!4 &1897499113
 Transform:
   m_ObjectHideFlags: 0
