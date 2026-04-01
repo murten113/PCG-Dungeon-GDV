@@ -837,7 +837,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -225.5, y: -153.44644}
+  m_AnchoredPosition: {x: 0, y: -153.44644}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1143240044
@@ -1024,6 +1024,9 @@ MonoBehaviour:
   endTile: {fileID: 11400000, guid: 628041ede75c01a4188a19351d41005a, type: 2}
   challengeATile: {fileID: 11400000, guid: 2363f8be40c96af408ba366235984d1a, type: 2}
   challengeBTile: {fileID: 11400000, guid: 8ad9f89b6d638994dbede03a33dc7399, type: 2}
+  rewardTile: {fileID: 11400000, guid: e28610a1982208347a365fa0edb6c29d, type: 2}
+  targetCamera: {fileID: 519420031}
+  cameraPadding: 2
 --- !u!4 &1897499113
 Transform:
   m_ObjectHideFlags: 0
