@@ -532,4 +532,17 @@ public class DungeonGenerator : MonoBehaviour
     {
         return p == startPos || p == farthestPos || p == challengeAPos || p == challengeBPos;
     }
+
+    [ContextMenu("Randomize Seed + Generate")]
+    private void RandomizeSeedAndGenerate()
+    {
+        seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        Generate();
+    }
+
+    public void RandomizeSeedAndGenerateButton()
+    {
+        seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+        Generate();
+    }
 }
