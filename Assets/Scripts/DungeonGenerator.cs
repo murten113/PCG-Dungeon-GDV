@@ -27,8 +27,8 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private TileBase floorTile;
     [SerializeField] private TileBase startTile;
     [SerializeField] private TileBase endTile;
-    [SerializeField] private TileBase challangeATile;
-    [SerializeField] private TileBase challangeBTile;
+    [SerializeField] private TileBase challengeATile;
+    [SerializeField] private TileBase challengeBTile;
 
 
     // Analysis data
@@ -37,8 +37,8 @@ public class DungeonGenerator : MonoBehaviour
     private List<Vector2Int> deadEnds = new();
     private Vector2Int startPos;
     private Vector2Int farthestPos;
-    private Vector2Int challangeAPos;
-    private Vector2Int challangeBPos;
+    private Vector2Int challengeAPos;
+    private Vector2Int challengeBPos;
 
     private System.Random rng;
     private bool[,] floorMap;
@@ -84,7 +84,7 @@ public class DungeonGenerator : MonoBehaviour
         CarveAllRooms();
 
         AnalyzeLayout();
-        PlaceChallanges();
+        PlaceChallenges();
 
         DrawFloorMap();
         DrawContent();
@@ -407,24 +407,34 @@ public class DungeonGenerator : MonoBehaviour
         {
             contentTilemap.SetTile(new Vector3Int(farthestPos.x, farthestPos.y, 0), endTile);
         }
+
+        if (challengeATile != null)
+        {
+            contentTilemap.SetTile(new Vector3Int(challengeAPos.x, challengeAPos.y, 0), challengeATile);
+        }
+
+        if (challengeBTile != null)
+        {
+            contentTilemap.SetTile(new Vector3Int(challengeBPos.x, challengeBPos.y, 0), challengeBTile);
+        }
     }
 
-    private void PlaceChallanges()
+    private void PlaceChallenges()
     {
         // fallbacks
-        challangeAPos = startPos;
-        challangeBPos = farthestPos;
+        challengeAPos = startPos;
+        challengeBPos = farthestPos;
 
-        challangeAPos = FindCellClosestToDistance(GetDistanceAt(farthestPos) / 2);
+        challengeAPos = FindCellClosestToDistance(GetDistanceAt(farthestPos) / 2);
 
-        Vector2Int? deadEndChoice = GetBestDeadEndForChallange();
+        Vector2Int? deadEndChoice = GetBestDeadEndForChallenge();
         if (deadEndChoice.HasValue)
         {
-            challangeBPos = deadEndChoice.Value;
+            challengeBPos = deadEndChoice.Value;
         }
         else
         {
-            challangeBPos = FindFarFloorNotReserved();
+            challengeBPos = FindFarFloorNotReserved();
         }
     }
 
@@ -454,7 +464,7 @@ public class DungeonGenerator : MonoBehaviour
         return best;
     }
 
-    private Vector2Int? GetBestDeadEndForChallange()
+    private Vector2Int? GetBestDeadEndForChallenge()
     {
         Vector2Int? best = null;
         int bestDist = -1;
@@ -473,5 +483,27 @@ public class DungeonGenerator : MonoBehaviour
         return best;
     }
 
-    
+    private Vector2Int FindFarFloorNotReserved()
+    {
+        Vector2Int best = startPos;
+        int bestDist = -1;
+
+        foreach (Vector2Int c in floorCells)
+        {
+            if (IsReserved(c)) continue;
+
+            int dist = distanceMap[c.x, c.y];
+            if (dist > bestDist)
+            {
+                bestDist = dist;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    private bool IsReserved(Vector2Int p)
+    {
+        return p == startPos || p == farthestPos || p == challengeAPos || p == challengeBPos;
+    }
 }
