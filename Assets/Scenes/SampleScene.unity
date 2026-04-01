@@ -1015,8 +1015,6 @@ MonoBehaviour:
   minRoomSize: 6
   maxDepth: 4
   roomPadding: 1
-  minChallengeBDistanceFromStart: 25
-  minRewardDistanceFromStart: 35
   seed: 1234
   randomizeSeedOnPlay: 1
   groundTilemap: {fileID: 984293608}
@@ -1029,6 +1027,13 @@ MonoBehaviour:
   rewardTile: {fileID: 11400000, guid: e28610a1982208347a365fa0edb6c29d, type: 2}
   targetCamera: {fileID: 519420031}
   cameraPadding: 2
+  minChallengeBDistanceFromStart: 12
+  minChallengeBDistanceFromEnd: 40
+  minRewardDistanceFromStart: 16
+  minRewardDistanceFromEnd: 40
+  challengeATargetDistanceFactor: 0.5
+  minChallengeADistanceFromStart: 8
+  minChallengeADistanceFromEnd: 8
 --- !u!4 &1897499113
 Transform:
   m_ObjectHideFlags: 0

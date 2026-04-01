@@ -35,6 +35,15 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private Camera targetCamera;
     [SerializeField] private float cameraPadding = 2f;
 
+	[Header("Placement Constraints")]
+	[SerializeField] private int minChallengeBDistanceFromStart = 12;
+	[SerializeField] private int minChallengeBDistanceFromEnd = 12;
+	[SerializeField] private int minRewardDistanceFromStart = 16;
+	[SerializeField] private int minRewardDistanceFromEnd = 16;
+    [SerializeField, Range(0f, 1f)] private float challengeATargetDistanceFactor = 0.5f; // mid-route
+    [SerializeField] private int minChallengeADistanceFromStart = 8;
+    [SerializeField] private int minChallengeADistanceFromEnd = 8;
+
 
     // Analysis data
     private int[,] distanceMap;
@@ -327,7 +336,6 @@ public class DungeonGenerator : MonoBehaviour
 
         RectInt startRoom = rooms[rng.Next(rooms.Count)];
         Vector2Int startCenter = GetRoomCenterCell(startRoom);
-        RunBfsFrom(startCenter, out _);
 
         RunBfsFrom(startCenter, out _);
 
@@ -461,7 +469,11 @@ public class DungeonGenerator : MonoBehaviour
         challengeAPos = startPos;
         challengeBPos = farthestPos;
 
-        challengeAPos = FindCellClosestToDistance(GetDistanceAt(farthestPos) / 2);
+        challengeAPos = FindCellClosestToTargetWithConstraints(
+        Mathf.RoundToInt(distanceMap[farthestPos.x, farthestPos.y] * challengeATargetDistanceFactor),
+        minChallengeADistanceFromStart,
+        minChallengeADistanceFromEnd
+        );
 
         Vector2Int? deadEndChoice = GetBestDeadEndForChallenge();
         if (deadEndChoice.HasValue)
@@ -474,49 +486,42 @@ public class DungeonGenerator : MonoBehaviour
         }
     }
 
-    private int GetDistanceAt(Vector2Int p)
-    {
-        if (!InBounds(p.x, p.y)) return -1;
-        return distanceMap[p.x, p.y];
-    }
-
-    private Vector2Int FindCellClosestToDistance(int targetDistance)
-    {
-        Vector2Int best = startPos;
-        int bestDiff = int.MaxValue;
-
-        foreach (Vector2Int c in floorCells)
-        {
-            int d = distanceMap[c.x, c.y];
-            if (d < 0) continue;
-
-            int diff = Mathf.Abs(d - targetDistance);
-            if (diff < bestDiff && !IsReserved(c))
-            {
-                bestDiff = diff;
-                best = c;
-            }
-        }
-        return best;
-    }
 
     private Vector2Int? GetBestDeadEndForChallenge()
     {
-        Vector2Int? best = null;
-        int bestDist = -1;
+		// distanceMap is from Start; compute distances from End locally
+		var distFromEnd = ComputeDistanceMap(farthestPos);
+
+		Vector2Int? best = null;
+		int bestScore = int.MinValue;
 
         foreach (Vector2Int d in deadEnds)
         {
             if (IsReserved(d)) continue;
 
-            int dist = distanceMap[d.x, d.y];
-            if (dist > bestDist)
+			int ds = distanceMap[d.x, d.y];   // distance from Start
+			int de = distFromEnd[d.x, d.y];   // distance from End
+			if (ds < 0 || de < 0) continue;
+
+			// Enforce minimum distances from both ends
+			if (ds < minChallengeBDistanceFromStart) continue;
+			if (de < minChallengeBDistanceFromEnd) continue;
+
+			// Score: farther from both Start and End
+			int score = ds + de;
+
+			if (score > bestScore)
             {
-                bestDist = dist;
+				bestScore = score;
                 best = d;
             }
         }
-        return best;
+
+		// Fallback if none qualifies: farthest free floor cell
+		if (!best.HasValue)
+			best = FindFarFloorNotReserved();
+
+		return best;
     }
 
     private Vector2Int FindFarFloorNotReserved()
@@ -558,22 +563,70 @@ public class DungeonGenerator : MonoBehaviour
 
 	private Vector2Int? GetBestDeadEndForReward()
 	{
+		// distanceMap is from Start; compute distances from End locally
+		var distFromEnd = ComputeDistanceMap(farthestPos);
+
 		Vector2Int? best = null;
-		int bestDist = -1;
+		int bestScore = int.MinValue;
 
 		foreach (Vector2Int d in deadEnds)
 		{
 			if (IsReserved(d)) continue;
 
-			int dist = distanceMap[d.x, d.y];
-			if (dist > bestDist)
+			int ds = distanceMap[d.x, d.y];   // distance from Start
+			int de = distFromEnd[d.x, d.y];   // distance from End
+			if (ds < 0 || de < 0) continue;
+
+			// Enforce minimum distances
+			if (ds < minRewardDistanceFromStart) continue;
+			if (de < minRewardDistanceFromEnd) continue;
+
+			// Penalize overlap with challenge B heavily
+			int penaltyIfSameAsB = (d == challengeBPos) ? 10000 : 0;
+
+			int score = ds + de - penaltyIfSameAsB;
+
+			if (score > bestScore)
 			{
-				bestDist = dist;
+				bestScore = score;
 				best = d;
 			}
 		}
 
+		// Fallback if none qualifies
+		if (!best.HasValue)
+			best = FindFarFloorNotReserved();
+
 		return best;
+	}
+
+	private int[,] ComputeDistanceMap(Vector2Int origin)
+	{
+		int[,] dist = new int[mapWidth, mapHeight];
+		for (int x = 0; x < mapWidth; x++)
+			for (int y = 0; y < mapHeight; y++)
+				dist[x, y] = -1;
+
+		if (!InBounds(origin.x, origin.y) || !floorMap[origin.x, origin.y])
+			return dist;
+
+		Queue<Vector2Int> q = new Queue<Vector2Int>();
+		dist[origin.x, origin.y] = 0;
+		q.Enqueue(origin);
+
+		while (q.Count > 0)
+		{
+			var c = q.Dequeue();
+			int cd = dist[c.x, c.y];
+			foreach (var n in GetFloorNeighbors4(c))
+			{
+				if (dist[n.x, n.y] != -1) continue;
+				dist[n.x, n.y] = cd + 1;
+				q.Enqueue(n);
+			}
+		}
+
+		return dist;
 	}
 
     private void FitCameraToDungeon()
@@ -627,5 +680,42 @@ public class DungeonGenerator : MonoBehaviour
     private Vector2Int GetRoomCenterCell(RectInt room)
     {
         return new Vector2Int(room.xMin + room.width / 2, room.yMin + room.height / 2);
+    }
+
+    private Vector2Int FindCellClosestToTargetWithConstraints(int targetDistance, int minFromStart, int minFromEnd)
+    {
+        var distFromEnd = ComputeDistanceMap(farthestPos);
+
+        Vector2Int best = startPos;
+        int bestScore = int.MaxValue; 
+        int bestTieBreak = int.MinValue; 
+
+        foreach (var c in floorCells)
+        {
+            if (IsReserved(c)) continue;
+
+            int ds = distanceMap[c.x, c.y];      // from Start
+            int de = distFromEnd[c.x, c.y];      // from End
+            if (ds < 0 || de < 0) continue;
+
+            if (ds < minFromStart) continue;
+            if (de < minFromEnd) continue;
+
+            int score = Mathf.Abs(ds - targetDistance);
+            int tieBreak = ds + de; // prefer cells far from both if equal score
+
+            if (score < bestScore || (score == bestScore && tieBreak > bestTieBreak))
+            {
+                bestScore = score;
+                bestTieBreak = tieBreak;
+                best = c;
+            }
+        }
+
+        // Fallback if nothing matched constraints
+        if (best == startPos)
+            best = FindFarFloorNotReserved();
+
+        return best;
     }
 }
