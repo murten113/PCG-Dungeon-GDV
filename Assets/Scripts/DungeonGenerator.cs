@@ -229,6 +229,72 @@ public class DungeonGenerator : MonoBehaviour
 
         startPos = floorCells[0];
 
-        
+        RunBfsFrom(StartPos, out farthestPos);
+        FindDeadEnds();
+    }
+
+    private void RunBfsFrom(Vector2Int origin, out Vector2Int farthest)
+    {
+        Queue<Vector2Int> queue = new();
+        distanceMap[origin.x, origin.y] = 0;
+        queue.Enqueue(origin);
+
+        farthest = origin;
+        int farthestDist = 0;
+
+        while (queue.Count > 0)
+        {
+            Vector2Int current = queue.Dequeue();
+            int currentDist = distanceMap[current.x, current.y];
+
+            if (currentDist > farthestDist)
+            {
+                farthestDist = currentDist;
+                farthest = current;
+            }
+
+            foreach (Vector2Int neighbor in GetNeighbors(current))
+            {
+                if (distanceMap[n.x, n.y] != -1) continue;
+                distanceMap[n.x, n.y] = currentDist + 1;
+                queue.Enqueue(n);
+            }
+        }
+    }
+
+    private void FindDeadEnds()
+    {
+        foreach (Vector2Int c in floorCells)
+        {
+            int openNeighbors = 0;
+            foreach (Vector2Int _ in GetFloorNeighbors(c))
+            {
+                openNeighbors++;
+            }
+            if (openNeighbors == 1)
+            {
+                deadEnds.Add(c);
+            }
+        }
+    }
+
+    private IEnumerable<Vector2Int> GetFloorNeighbors(Vector2Int cell)
+    {
+        Vector2Int[] dirs =
+        {
+            new Vector2Int(1, 0),
+            new Vector2Int(-1, 0),
+            new Vector2Int(0, 1),
+            new Vector2Int(0, -1)
+        };
+
+        foreach (Vector2Int d in dirs)
+        {
+            Vector2Int n = p + d;
+            if (InBounds(n.x, n.y) && floorMap[n.x, n.y])
+            {
+                yield return n;
+            }
+        }
     }
 }
