@@ -43,6 +43,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float challengeATargetDistanceFactor = 0.5f; // mid-route
     [SerializeField] private int minChallengeADistanceFromStart = 8;
     [SerializeField] private int minChallengeADistanceFromEnd = 8;
+	[SerializeField] private int minSeparationBetweenBAndReward = 8;
 
 
     // Analysis data
@@ -58,6 +59,8 @@ public class DungeonGenerator : MonoBehaviour
     private System.Random rng;
     private bool[,] floorMap;
     private readonly List<RectInt> rooms = new();
+
+
 
     private class BSPNode
     {
@@ -352,14 +355,14 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
 
-    if (bestEndCenter == startCenter)
-    {
-        foreach (var n in GetFloorNeighbors4(startCenter))
+        if (bestEndCenter == startCenter)
         {
-            bestEndCenter = n;
-            break;
+            foreach (var n in GetFloorNeighbors4(startCenter))
+            {
+                bestEndCenter = n;
+                break;
+            }
         }
-    }
 
         startPos = startCenter;
         farthestPos = bestEndCenter;
@@ -563,8 +566,9 @@ public class DungeonGenerator : MonoBehaviour
 
 	private Vector2Int? GetBestDeadEndForReward()
 	{
-		// distanceMap is from Start; compute distances from End locally
+		// distanceMap is from Start; compute distances from End and from Challenge B locally
 		var distFromEnd = ComputeDistanceMap(farthestPos);
+		var distFromB = ComputeDistanceMap(challengeBPos);
 
 		Vector2Int? best = null;
 		int bestScore = int.MinValue;
@@ -575,16 +579,15 @@ public class DungeonGenerator : MonoBehaviour
 
 			int ds = distanceMap[d.x, d.y];   // distance from Start
 			int de = distFromEnd[d.x, d.y];   // distance from End
-			if (ds < 0 || de < 0) continue;
+			int db = distFromB[d.x, d.y];     // distance from Challenge B
+			if (ds < 0 || de < 0 || db < 0) continue;
 
 			// Enforce minimum distances
 			if (ds < minRewardDistanceFromStart) continue;
 			if (de < minRewardDistanceFromEnd) continue;
+			if (db < minSeparationBetweenBAndReward) continue;
 
-			// Penalize overlap with challenge B heavily
-			int penaltyIfSameAsB = (d == challengeBPos) ? 10000 : 0;
-
-			int score = ds + de - penaltyIfSameAsB;
+			int score = ds + de; // far from both ends
 
 			if (score > bestScore)
 			{
