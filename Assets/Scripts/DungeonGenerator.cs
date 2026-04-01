@@ -323,6 +323,30 @@ public class DungeonGenerator : MonoBehaviour
 
         RunBfsFrom(candidateStart, out Vector2Int candidateEnd);
 
+        if (candidateStart == candidateEnd)
+        {
+            Vector2Int alt = candidateStart;
+            int best = -1;
+            foreach (var c in floorCells)
+            {
+                int d = distanceMap[c.x, c.y];
+                if (d > best && c != candidateStart)
+                {
+                    best = d;
+                    alt = c;
+                }
+            }
+            if (alt == candidateStart)
+            {
+                foreach (var n in GetFloorNeighbors4(candidateStart))
+                {
+                    alt = n;
+                    break;
+                }
+            }
+            candidateStart = alt;
+        }
+
         startPos = candidateStart;
         farthestPos = candidateEnd;
 
@@ -417,7 +441,7 @@ public class DungeonGenerator : MonoBehaviour
         {
             contentTilemap.SetTile(new Vector3Int(startPos.x, startPos.y, 0), startTile);
         }
-        
+
         Debug.Log($"Start:{startPos} tile?{startTile!=null}  End:{farthestPos}  A:{challengeAPos}  B:{challengeBPos}");
     }
 
