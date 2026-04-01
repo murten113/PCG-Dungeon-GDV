@@ -23,8 +23,8 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private Tilemap groundTilemap;
     [SerializeField] private Tilemap contentTilemap;
     [SerializeField] private Tilemap FloorTile;
-    [SerializeField] private Tilemap startTile;
-    [SerializeField] private Tilemap endTile;
+    [SerializeField] private TileBase startTile;
+    [SerializeField] private TileBase endTile;
 
     [Header("Tiles")]
     [SerializeField] private TileBase floorTile;
