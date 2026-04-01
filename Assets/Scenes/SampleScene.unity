@@ -1015,6 +1015,8 @@ MonoBehaviour:
   minRoomSize: 6
   maxDepth: 4
   roomPadding: 1
+  minChallengeBDistanceFromStart: 25
+  minRewardDistanceFromStart: 35
   seed: 1234
   randomizeSeedOnPlay: 1
   groundTilemap: {fileID: 984293608}

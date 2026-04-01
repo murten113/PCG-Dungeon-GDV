@@ -29,7 +29,7 @@ public class DungeonGenerator : MonoBehaviour
     [SerializeField] private TileBase endTile;
     [SerializeField] private TileBase challengeATile;
     [SerializeField] private TileBase challengeBTile;
-    [SerializeField] private TileBase rewardTile;
+	[SerializeField] private TileBase rewardTile;
 
     [Header("Camera")]
     [SerializeField] private Camera targetCamera;
@@ -44,7 +44,7 @@ public class DungeonGenerator : MonoBehaviour
     private Vector2Int farthestPos;
     private Vector2Int challengeAPos;
     private Vector2Int challengeBPos;
-    private Vector2Int rewardPos;
+	private Vector2Int rewardPos;
 
     private System.Random rng;
     private bool[,] floorMap;
@@ -91,7 +91,7 @@ public class DungeonGenerator : MonoBehaviour
 
         AnalyzeLayout();
         PlaceChallenges();
-        PlaceReward();
+		PlaceReward();
 
         DrawFloorMap();
         DrawContent();
@@ -325,39 +325,37 @@ public class DungeonGenerator : MonoBehaviour
 
         if (floorCells.Count == 0) return;
 
-        // 1) Start: farthest from a random room center (seeded)
         RectInt startRoom = rooms[rng.Next(rooms.Count)];
-        Vector2Int startAnchor = GetRoomCenterCell(startRoom);
-        RunBfsFrom(startAnchor, out Vector2Int a);
+        Vector2Int startCenter = GetRoomCenterCell(startRoom);
+        RunBfsFrom(startCenter, out _);
 
-        // 2) End: farthest from 'a'
-        RunBfsFrom(a, out Vector2Int b);
+        RunBfsFrom(startCenter, out _);
 
-        // 3) Enforce different rooms if possible
-        RectInt? roomA = GetRoomContaining(a);
-        RectInt? roomB = GetRoomContaining(b);
-        if (roomA.HasValue && roomB.HasValue && roomA.Value == roomB.Value)
+        int bestDist = -1;
+        Vector2Int bestEndCenter = startCenter;
+        foreach (RectInt room in rooms)
         {
-            // pick the farthest cell not inside roomA
-            int best = -1;
-            Vector2Int bestCell = b;
-            foreach (var c in floorCells)
+            Vector2Int center = GetRoomCenterCell(room);
+            int d = InBounds(center.x, center.y) ? distanceMap[center.x, center.y] : -1;
+            if (d > bestDist && center != startCenter)
             {
-                if (GetRoomContaining(c) == roomA) continue;
-                int d = distanceMap[c.x, c.y];
-                if (d > best)
-                {
-                    best = d;
-                    bestCell = c;
-                }
+                bestDist = d;
+                bestEndCenter = center;
             }
-            b = bestCell;
         }
 
-        startPos = a;
-        farthestPos = b;
+    if (bestEndCenter == startCenter)
+    {
+        foreach (var n in GetFloorNeighbors4(startCenter))
+        {
+            bestEndCenter = n;
+            break;
+        }
+    }
 
-        // Keep distanceMap from start for later analyses
+        startPos = startCenter;
+        farthestPos = bestEndCenter;
+
         RunBfsFrom(startPos, out _);
         FindDeadEnds();
     }
@@ -444,11 +442,11 @@ public class DungeonGenerator : MonoBehaviour
             contentTilemap.SetTile(new Vector3Int(challengeBPos.x, challengeBPos.y, 0), challengeBTile);
         }
 
-        if (rewardTile != null)
-        {
-            contentTilemap.SetTile(new Vector3Int(rewardPos.x, rewardPos.y, 0), rewardTile);
-        }
-
+		if (rewardTile != null)
+		{
+			contentTilemap.SetTile(new Vector3Int(rewardPos.x, rewardPos.y, 0), rewardTile);
+		}
+        
         if (startTile != null)
         {
             contentTilemap.SetTile(new Vector3Int(startPos.x, startPos.y, 0), startTile);
@@ -474,34 +472,6 @@ public class DungeonGenerator : MonoBehaviour
         {
             challengeBPos = FindFarFloorNotReserved();
         }
-    }
-
-    private void PlaceReward()
-    {
-        rewardPos = FindFarFloorNotReserved();
-
-        Vector2Int? bestDeadEnd = GetBestDeadEndForReward();
-        if (bestDeadEnd.HasValue)
-        {
-            rewardPos = bestDeadEnd.Value;
-        }
-    }
-
-    private Vector2Int? GetBestDeadEndForReward()
-    {
-        Vector2Int? best = null;
-        int bestDist = -1;
-        foreach (var d in deadEnds)
-        {
-            if (IsReserved(d)) continue;
-            int dist = distanceMap[d.x, d.y];
-            if (dist >  bestDist)
-            {
-                bestDist = dist;
-                best = d;
-            }
-        }
-        return best;
     }
 
     private int GetDistanceAt(Vector2Int p)
@@ -570,8 +540,41 @@ public class DungeonGenerator : MonoBehaviour
 
     private bool IsReserved(Vector2Int p)
     {
-        return p == startPos || p == farthestPos || p == challengeAPos || p == challengeBPos || p == rewardPos;
+		return p == startPos || p == farthestPos || p == challengeAPos || p == challengeBPos || p == rewardPos;
     }
+
+	private void PlaceReward()
+	{
+		// Fallback: verst mogelijke vrije vloer
+		rewardPos = FindFarFloorNotReserved();
+
+		// Prefer: verste dead end die niet gereserveerd is
+		Vector2Int? bestDeadEnd = GetBestDeadEndForReward();
+		if (bestDeadEnd.HasValue)
+		{
+			rewardPos = bestDeadEnd.Value;
+		}
+	}
+
+	private Vector2Int? GetBestDeadEndForReward()
+	{
+		Vector2Int? best = null;
+		int bestDist = -1;
+
+		foreach (Vector2Int d in deadEnds)
+		{
+			if (IsReserved(d)) continue;
+
+			int dist = distanceMap[d.x, d.y];
+			if (dist > bestDist)
+			{
+				bestDist = dist;
+				best = d;
+			}
+		}
+
+		return best;
+	}
 
     private void FitCameraToDungeon()
     {
@@ -624,15 +627,5 @@ public class DungeonGenerator : MonoBehaviour
     private Vector2Int GetRoomCenterCell(RectInt room)
     {
         return new Vector2Int(room.xMin + room.width / 2, room.yMin + room.height / 2);
-    }
-
-    private RectInt? GetRoomContaining(Vector2Int p)
-    {
-        foreach (var r in rooms)
-        {
-            if (p.x >= r.xMin && p.x < r.xMax && p.y >= r.yMin && p.y < r.yMax)
-                return r;
-        }
-        return null;
     }
 }
