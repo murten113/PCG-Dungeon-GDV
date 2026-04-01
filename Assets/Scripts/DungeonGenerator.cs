@@ -26,6 +26,7 @@ public class DungeonGenerator : MonoBehaviour
     [Header("Tiles")]
     [SerializeField] private TileBase floorTile;
 
+    // Analysis data
     private int[,] distanceMap;
     private List<Vector2Int> floorCells = new();
     private List<Vector2Int> deadEnds = new();
@@ -41,7 +42,7 @@ public class DungeonGenerator : MonoBehaviour
         public RectInt Bounds;
         public BSPNode Left;
         public BSPNode Right;
-        public RectInt? Room; // kamer in leaf-node
+        public RectInt? Room;
         public bool IsLeaf => Left == null && Right == null;
 
         public BSPNode(RectInt bounds)
@@ -69,15 +70,16 @@ public class DungeonGenerator : MonoBehaviour
 
         RectInt rootRect = new RectInt(1, 1, mapWidth - 2, mapHeight - 2);
         BSPNode root = new BSPNode(rootRect);
- 
+
         SplitRecursive(root, 0);
         CreateRoomsInLeaves(root);
+        ConnectRooms(root);
         CarveAllRooms();
 
         AnalyzeLayout();
-
         DrawFloorMap();
-        Debug.Log($"Dungeon generated with seed: {seed}, rooms: {rooms.Count}");
+
+        Debug.Log($"Dungeon generated with seed: {seed}, rooms: {rooms.Count}, deadEnds: {deadEnds.Count}");
     }
 
     private void SplitRecursive(BSPNode node, int depth)
@@ -151,12 +153,98 @@ public class DungeonGenerator : MonoBehaviour
         CreateRoomsInLeaves(node.Right);
     }
 
+    private void ConnectRooms(BSPNode node)
+    {
+        if (node == null || node.IsLeaf) return;
+
+        ConnectRooms(node.Left);
+        ConnectRooms(node.Right);
+
+        RectInt? leftRoom = GetAnyRoom(node.Left);
+        RectInt? rightRoom = GetAnyRoom(node.Right);
+
+        if (leftRoom.HasValue && rightRoom.HasValue)
+        {
+            Vector2Int a = GetRoomCenter(leftRoom.Value);
+            Vector2Int b = GetRoomCenter(rightRoom.Value);
+            CarveCorridor(a, b);
+        }
+    }
+
+    private RectInt? GetAnyRoom(BSPNode node)
+    {
+        if (node == null) return null;
+
+        if (node.IsLeaf)
+            return node.Room;
+
+        bool tryLeftFirst = rng.NextDouble() < 0.5;
+
+        if (tryLeftFirst)
+        {
+            RectInt? left = GetAnyRoom(node.Left);
+            if (left.HasValue) return left;
+            return GetAnyRoom(node.Right);
+        }
+        else
+        {
+            RectInt? right = GetAnyRoom(node.Right);
+            if (right.HasValue) return right;
+            return GetAnyRoom(node.Left);
+        }
+    }
+
+    private Vector2Int GetRoomCenter(RectInt room)
+    {
+        int cx = room.xMin + room.width / 2;
+        int cy = room.yMin + room.height / 2;
+        return new Vector2Int(cx, cy);
+    }
+
+    private void CarveCorridor(Vector2Int from, Vector2Int to)
+    {
+        bool horizontalFirst = rng.NextDouble() < 0.5;
+
+        if (horizontalFirst)
+        {
+            CarveHorizontalLine(from.x, to.x, from.y);
+            CarveVerticalLine(from.y, to.y, to.x);
+        }
+        else
+        {
+            CarveVerticalLine(from.y, to.y, from.x);
+            CarveHorizontalLine(from.x, to.x, to.y);
+        }
+    }
+
+    private void CarveHorizontalLine(int x1, int x2, int y)
+    {
+        int min = Mathf.Min(x1, x2);
+        int max = Mathf.Max(x1, x2);
+
+        for (int x = min; x <= max; x++)
+        {
+            if (InBounds(x, y))
+                floorMap[x, y] = true;
+        }
+    }
+
+    private void CarveVerticalLine(int y1, int y2, int x)
+    {
+        int min = Mathf.Min(y1, y2);
+        int max = Mathf.Max(y1, y2);
+
+        for (int y = min; y <= max; y++)
+        {
+            if (InBounds(x, y))
+                floorMap[x, y] = true;
+        }
+    }
+
     private void CarveAllRooms()
     {
         foreach (RectInt room in rooms)
-        {
             CarveRect(room.xMin, room.yMin, room.width, room.height);
-        }
     }
 
     private void ClearTilemaps()
@@ -202,40 +290,31 @@ public class DungeonGenerator : MonoBehaviour
         deadEnds.Clear();
 
         distanceMap = new int[mapWidth, mapHeight];
-
         for (int x = 0; x < mapWidth; x++)
         {
-            for (int = 0; y < mapHeight; y++)
-            {
+            for (int y = 0; y < mapHeight; y++)
                 distanceMap[x, y] = -1;
-            }
         }
 
         for (int x = 0; x < mapWidth; x++)
         {
-            for (int y = 0; y< mapHeight; y++)
+            for (int y = 0; y < mapHeight; y++)
             {
                 if (floorMap[x, y])
-                {
-                    floorCells.Add(new Vector2Int(x, y))
-                }
+                    floorCells.Add(new Vector2Int(x, y));
             }
         }
 
-        if (floorCells.Count == 0)
-        {
-            return;
-        }
+        if (floorCells.Count == 0) return;
 
         startPos = floorCells[0];
-
-        RunBfsFrom(StartPos, out farthestPos);
+        RunBfsFrom(startPos, out farthestPos);
         FindDeadEnds();
     }
 
     private void RunBfsFrom(Vector2Int origin, out Vector2Int farthest)
     {
-        Queue<Vector2Int> queue = new();
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
         distanceMap[origin.x, origin.y] = 0;
         queue.Enqueue(origin);
 
@@ -253,7 +332,7 @@ public class DungeonGenerator : MonoBehaviour
                 farthest = current;
             }
 
-            foreach (Vector2Int neighbor in GetNeighbors(current))
+            foreach (Vector2Int n in GetFloorNeighbors4(current))
             {
                 if (distanceMap[n.x, n.y] != -1) continue;
                 distanceMap[n.x, n.y] = currentDist + 1;
@@ -267,18 +346,15 @@ public class DungeonGenerator : MonoBehaviour
         foreach (Vector2Int c in floorCells)
         {
             int openNeighbors = 0;
-            foreach (Vector2Int _ in GetFloorNeighbors(c))
-            {
+            foreach (Vector2Int _ in GetFloorNeighbors4(c))
                 openNeighbors++;
-            }
+
             if (openNeighbors == 1)
-            {
                 deadEnds.Add(c);
-            }
         }
     }
 
-    private IEnumerable<Vector2Int> GetFloorNeighbors(Vector2Int cell)
+    private IEnumerable<Vector2Int> GetFloorNeighbors4(Vector2Int p)
     {
         Vector2Int[] dirs =
         {
@@ -292,9 +368,7 @@ public class DungeonGenerator : MonoBehaviour
         {
             Vector2Int n = p + d;
             if (InBounds(n.x, n.y) && floorMap[n.x, n.y])
-            {
                 yield return n;
-            }
         }
     }
 }
