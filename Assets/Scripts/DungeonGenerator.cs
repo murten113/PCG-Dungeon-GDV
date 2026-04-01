@@ -22,6 +22,9 @@ public class DungeonGenerator : MonoBehaviour
     [Header("Tilemaps")]
     [SerializeField] private Tilemap groundTilemap;
     [SerializeField] private Tilemap contentTilemap;
+    [SerializeField] private Tilemap FloorTile;
+    [SerializeField] private Tilemap startTile;
+    [SerializeField] private Tilemap endTile;
 
     [Header("Tiles")]
     [SerializeField] private TileBase floorTile;
@@ -78,6 +81,8 @@ public class DungeonGenerator : MonoBehaviour
 
         AnalyzeLayout();
         DrawFloorMap();
+
+        DrawContent();
 
         Debug.Log($"Dungeon generated with seed: {seed}, rooms: {rooms.Count}, deadEnds: {deadEnds.Count}");
     }
@@ -306,9 +311,18 @@ public class DungeonGenerator : MonoBehaviour
         }
 
         if (floorCells.Count == 0) return;
+        
+        Vector2Int randomFloor = floorCells[rng.Next(floorCells.Count)];
 
-        startPos = floorCells[0];
-        RunBfsFrom(startPos, out farthestPos);
+        RungBfsFrom(randomFloor, out Vector2Int candidateStart);
+
+        RunBfsFrom(candidateStart, out Vector2Int candidateEnd);
+
+        startPos = candidateEnd;
+        farthestPos = candidateStart;
+
+        RunBfsFrom(startPos, out _);
+
         FindDeadEnds();
     }
 
