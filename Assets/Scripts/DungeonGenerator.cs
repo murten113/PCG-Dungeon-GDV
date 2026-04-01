@@ -314,7 +314,7 @@ public class DungeonGenerator : MonoBehaviour
         
         Vector2Int randomFloor = floorCells[rng.Next(floorCells.Count)];
 
-        RungBfsFrom(randomFloor, out Vector2Int candidateStart);
+        RunBfsFrom(randomFloor, out Vector2Int candidateStart);
 
         RunBfsFrom(candidateStart, out Vector2Int candidateEnd);
 
@@ -383,6 +383,24 @@ public class DungeonGenerator : MonoBehaviour
             Vector2Int n = p + d;
             if (InBounds(n.x, n.y) && floorMap[n.x, n.y])
                 yield return n;
+        }
+    }
+
+    private void DrawContent()
+    {
+        if (contentTilemap == null)
+        {
+            return;
+        }
+
+        if (startTile != null)
+        {
+            contentTilemap.SetTile(new Vector3Int(startPos.x, startPos.y, 0), startTile);
+        }
+
+        if (endTile != null)
+        {
+            contentTilemap.SetTile(new Vector3Int(farthestPos.x, farthestPos.y, 0), endTile);
         }
     }
 }
